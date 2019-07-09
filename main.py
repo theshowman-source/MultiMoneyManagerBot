@@ -5,6 +5,7 @@ import config
 import keys
 import shelve
 import pyqiwi
+import re
 from deuslib import Mongo, Data
 
 qiwidb =    shelve.open("qiwi", flag="c", protocol=None, writeback=False) # хранлище номер-токен
@@ -17,7 +18,7 @@ def startcom(message: Message):
 
 @bot.message_handler(commands=[ 'qiwi' ])
 def qiwicom(message: Message):
-    amount = Data().get_many('qiwi', 'qiwi', key='owner', value=message.chat.id)
+    amount =    Data().get_many('qiwi', 'qiwi', key='owner', value=message.chat.id)
     if amount:
         bot.send_message(message.chat.id, "QiwiManager activated\n\nВсего кошельков - {}".format(str(len(list(amount)))), reply_markup=keys.qiwik)
     else:
@@ -37,7 +38,8 @@ def sendcom(number: Message):
     num =       number.text
 
     if num == "Отмена":
-        bot.send_message(number.chat.id, "Отменено")
+        msg =       bot.send_message(number.chat.id, "Отменено", reply_markup=keys.qiwik)
+        bot.edit_message_reply_markup(number.chat.id, msg.message_id)
     else:
         msg =   bot.send_message(number.chat.id, "Введите сумму: ")
         bot.register_next_step_handler(msg, amountcom)
@@ -48,9 +50,6 @@ def amountcom(amount: Message):
 
     for a in qiwidb.keys():
         if a in c_message.text:
-            print(c_message.text)
-            print(num)
-            print(sum)
             print(a)
             wallet =    pyqiwi.Wallet(token=qiwidb[str(a)], number=a)
             pay =       wallet.send('99', str(num), float(sum), comment='mMm')
@@ -64,7 +63,6 @@ def ev(callback_query: types.CallbackQuery):
     message_id =    callback_query.message.message_id
 
     for a in list(qiwidb.items()):
-        print(a)
         wallet =    pyqiwi.Wallet(token=a[1], number=a[0])
 
         def balance():
@@ -87,9 +85,10 @@ def qiwiadd(number: Message):
     num =       number.text
 
     if number.text == "Отмена":
-        bot.send_message(number.chat.id, "Отменено")
+        msg =       bot.send_message(number.chat.id, "Отменено", reply_markup=keys.qiwik)
+        bot.edit_message_reply_markup(number.chat.id, msg.message_id)
     else:
-        msg =   bot.send_message(number.chat.id, "Введите токен")
+        msg =       bot.send_message(number.chat.id, "Введите токен")
         bot.register_next_step_handler(msg, tokenadd)
 
 def tokenadd(tok: Message):
@@ -106,7 +105,6 @@ def tokenadd(tok: Message):
                 for b in wallet.accounts:
                     return b.balance.get('amount')
 
-            print(str(balance()) + "quotes")
             qiwidb[str(num[1:])] =  str(qiwit)
             json =      {
                         "number": num[1:],
@@ -124,9 +122,9 @@ def tokenadd(tok: Message):
 
     qiwidb.sync()
 
-@bot.message_handler(commands=list(qiwidb.keys()))
+@bot.message_handler(func=lambda c: c.text[1:] in list(qiwidb.keys()))
 def numcom(message: Message):
-    number = Data().get('qiwi', 'qiwi', key='number', value=str(message.text[1:]))
+    number =        Data().get('qiwi', 'qiwi', key='number', value=str(message.text[1:]))
 
     if message.chat.id == number['owner']:
         wallet =    pyqiwi.Wallet(token=qiwidb[str(message.text[1:])], number=message.text[1:])
