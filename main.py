@@ -1,12 +1,12 @@
 import telebot
-from telebot import types
-from telebot.types import Message
+from telebot        import types
+from telebot.types  import Message
 import config
 import keys
 import shelve
 import pyqiwi
 import re
-from deuslib import Mongo, Data
+from deuslib        import Mongo, Data
 
 qiwidb =    shelve.open("qiwi", flag="c", protocol=None, writeback=False) # хранлище номер-токен
 mg =        Mongo().mg() # если понадобится что-то с монгой
@@ -24,6 +24,28 @@ def qiwicom(message: Message):
     else:
         bot.send_message(message.chat.id, "QiwiManager activated", reply_markup=keys.qiwik)
 
+@bot.callback_query_handler(func=lambda c: c.data == 'qiwidel')
+def ev(callback_query: types.CallbackQuery):
+    global message
+    message =       callback_query.message
+    message_id =    callback_query.message.message_id
+
+    msg = bot.send_message(message.chat.id, "Вы уверены что хотите удалить номер?", reply_markup=keys.surekb)
+    bot.register_next_step_handler(msg, suredelete)
+
+def suredelete(sure_m: Message):
+    global choice
+    choice = sure_m.text
+
+    if choice == "Уверен":
+        for a in qiwidb.keys():
+            if a in message.text:
+                del qiwidb[str(a)]
+                Data().remove('qiwi', 'qiwi', key='number', value=a)
+
+    else:
+        bot.send_message(sure_m, "Отменено")
+
 @bot.callback_query_handler(func=lambda c: c.data == 'qiwiedit')
 def ev(callback_query: types.CallbackQuery):
     global message
@@ -35,7 +57,7 @@ def ev(callback_query: types.CallbackQuery):
 
 def newtoken(nt_msg: Message):
     global nt
-    nt = str(nt_msg.text)
+    nt =            str(nt_msg.text)
 
     for a in qiwidb.keys():
         if a in message:

@@ -53,9 +53,17 @@ class Data:
             return user
 
 
-    def update(self, db, collection, key, value, item=None):
+    def update(self, db, collection, key, value, item):
         mg[db][collection].update_one(item, {"$set": {key: value}})
         mg.close()
+
+    def remove(self, db, collection, key=None, value=None, item=None):
+        if item:
+            mg[db][collection].delete_one(item)
+            mg.close()
+        else:
+            mg[db][collection].delete_one({key: value})
+            mg.close()
 
 class Pay:
     def paykey(self, sum, id, qiwi=None, yandex=None, card=None):

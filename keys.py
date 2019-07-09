@@ -24,3 +24,10 @@ backb =             types.KeyboardButton(text="Отмена")
 
 backkb =            types.ReplyKeyboardMarkup(resize_keyboard=True)
 backkb.add(backb)
+
+sureb =             types.KeyboardButton(text="Уверен")
+nosureb =           types.KeyboardButton(text="Нет, я передумал")
+
+surekb =            types.ReplyKeyboardMarkup(resize_keyboard=True)
+surekb.add(sureb)
+surekb.add(nosureb)
