@@ -50,10 +50,12 @@ def amountcom(amount: Message):
 
     for a in qiwidb.keys():
         if a in c_message.text:
-            print(a)
             wallet =    pyqiwi.Wallet(token=qiwidb[str(a)], number=a)
             pay =       wallet.send('99', str(num), float(sum), comment='mMm')
-            info =      'Статус {0}\nПолучатель: {1}\nСумма перевода: {2}'.format(pay.transaction['state']['code'], pay.fields['account'], pay.sum)
+            print(pay)
+            print(pay.transaction)
+            print(pay.transaction.state)
+            info =      'Статус {0}\nПолучатель: {1}\nСумма перевода: {2}'.format(pay.transaction.state, pay.fields.account, pay.sum.amount)
 
             bot.send_message(amount.chat.id, info)
 
