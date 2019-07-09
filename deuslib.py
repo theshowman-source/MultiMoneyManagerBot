@@ -53,8 +53,9 @@ class Data:
             return user
 
 
-    def update(self, db, collection, key, value, user=None):
-        mg[db][collection].update_one(user, {"$set": {key: value}})
+    def update(self, db, collection, key, value, item=None):
+        mg[db][collection].update_one(item, {"$set": {key: value}})
+        mg.close()
 
 class Pay:
     def paykey(self, sum, id, qiwi=None, yandex=None, card=None):

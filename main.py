@@ -24,6 +24,26 @@ def qiwicom(message: Message):
     else:
         bot.send_message(message.chat.id, "QiwiManager activated", reply_markup=keys.qiwik)
 
+@bot.callback_query_handler(func=lambda c: c.data == 'qiwiedit')
+def ev(callback_query: types.CallbackQuery):
+    global message
+    message =       callback_query.message
+    message_id =    callback_query.message.message_id
+
+    msg =           bot.send_message(message.chat.id, "Введите новый токен")
+    bot.register_next_step_handler(msg, newtoken)
+
+def newtoken(nt_msg: Message):
+    global nt
+    nt = str(nt_msg.text)
+
+    for a in qiwidb.keys():
+        if a in message:
+            num = Data().get('qiwi', 'qiwi', key='number', value=a)
+            qiwidb[str(a)] = str(nt)
+            Data().update('qiwi', 'qiwi', item=num, key='token', value=nt)
+            bot.send_message(nt_msg.chat.id, 'Успешно обновлено')
+
 @bot.callback_query_handler(func=lambda c: c.data == 'qiwisend')
 def ev(callback_query: types.CallbackQuery):
     global c_message
