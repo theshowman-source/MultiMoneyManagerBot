@@ -103,8 +103,10 @@ def ev(callback_query: types.CallbackQuery):
     message =       callback_query.message
     message_id =    callback_query.message.message_id
 
-    for a in list(qiwidb.items()):
-        wallet =    pyqiwi.Wallet(token=a[1], number=a[0])
+    all =           Data().get_many('qiwi', 'qiwi', key='owner', value=message.chat.id)
+
+    for a in all:
+        wallet =    pyqiwi.Wallet(token=a['token'], number=a['number'])
 
         def balance():
             for b in wallet.accounts:
