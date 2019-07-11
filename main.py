@@ -5,7 +5,6 @@ import config
 import keys
 import shelve
 import pyqiwi
-import re
 from deuslib        import Mongo, Data
 import cherrypy
 
@@ -87,7 +86,7 @@ def ev(callback_query: types.CallbackQuery):
     c_message =     callback_query.message
     message_id =    callback_query.message.message_id
 
-    msg =           bot.send_message(c_message.chat.id, "Введите номер получателя: ", reply_markup=keys.backkb)
+    msg =           bot.send_message(c_message.chat.id, "Введите номер получателя (без +): ", reply_markup=keys.backkb)
     bot.register_next_step_handler(msg, sendcom)
 
 def sendcom(number: Message):
@@ -99,18 +98,20 @@ def sendcom(number: Message):
         bot.edit_message_reply_markup(number.chat.id, msg.message_id)
     else:
         try:
-            num[1:] -=  1
-            msg =       bot.send_message(number.chat.id, "Введите сумму (только число): ")
+            check =         int(num)
+            check -=        1
+            msg =           bot.send_message(number.chat.id, "Введите сумму (только число): ")
             bot.register_next_step_handler(msg, amountcom)
         except:
             bot.send_message(number.chat.id, "Что-то не так, попробуйте убрать все буквы")
 
 def amountcom(amount: Message):
     global sum
-    sum = amount.text
+    sum =           amount.text
     try:
-        sum -= 1
-        msg = bot.send_message(amount.chat.id, "Хотите добавить комментарий к платежу?", reply_markup=keys.surekb)
+        check =     float(sum)
+        check -=    1
+        msg =       bot.send_message(amount.chat.id, "Хотите добавить комментарий к платежу?", reply_markup=keys.surekb)
         bot.register_next_step_handler(msg, comcom)
     except:
         bot.send_message(amount.chat.id, "Что-то не так, попробуйте убрать все буквы")
@@ -120,7 +121,7 @@ def comcom(comment: Message):
     com =                   comment.text
 
     if com ==               "Да":
-        msg = bot.send_message(comment, "Введите комментарий: ", reply_markup=keys.backkb)
+        msg = bot.send_message(comment.chat.id, "Введите комментарий: ", reply_markup=keys.backkb)
         bot.register_next_step_handler(msg, comtext)
     elif com ==             "Отмена":
         bot.send_message(comment.chat.id, "Отменено")
