@@ -92,26 +92,68 @@ def ev(callback_query: types.CallbackQuery):
 
 def sendcom(number: Message):
     global num
-    num =       number.text
+    num =               number.text
 
-    if num == "Отмена":
-        msg =       bot.send_message(number.chat.id, "Отменено", reply_markup=keys.qiwik)
+    if num ==           "Отмена":
+        msg =           bot.send_message(number.chat.id, "Отменено", reply_markup=keys.qiwik)
         bot.edit_message_reply_markup(number.chat.id, msg.message_id)
     else:
-        msg =       bot.send_message(number.chat.id, "Введите сумму: ")
-        bot.register_next_step_handler(msg, amountcom)
+        try:
+            num[1:] -=  1
+            msg =       bot.send_message(number.chat.id, "Введите сумму (только число): ")
+            bot.register_next_step_handler(msg, amountcom)
+        except:
+            bot.send_message(number.chat.id, "Что-то не так, попробуйте убрать все буквы")
 
 def amountcom(amount: Message):
     global sum
-    sum =               amount.text
+    sum = amount.text
+    try:
+        sum -= 1
+        msg = bot.send_message(amount.chat.id, "Хотите добавить комментарий к платежу?", reply_markup=keys.surekb)
+        bot.register_next_step_handler(msg, comcom)
+    except:
+        bot.send_message(amount.chat.id, "Что-то не так, попробуйте убрать все буквы")
 
-    for a in qiwidb.keys():
-        if a in c_message.text:
-            wallet =    pyqiwi.Wallet(token=qiwidb[str(a)], number=a)
-            pay =       wallet.send('99', str(num), float(sum), comment='mMm')
-            info =      'Статус {0}\nПолучатель: {1}\nСумма перевода: {2}'.format(pay.transaction.state, pay.fields.account, pay.sum.amount)
+def comcom(comment: Message):
+    global com
+    com =                   comment.text
 
-            bot.send_message(amount.chat.id, info)
+    if com ==               "Да":
+        msg = bot.send_message(comment, "Введите комментарий: ", reply_markup=keys.backkb)
+        bot.register_next_step_handler(msg, comtext)
+    elif com ==             "Отмена":
+        bot.send_message(comment.chat.id, "Отменено")
+    else:
+        msg2 =              bot.send_message(comment.chat.id, "Получатель: {}\nСумма: {}\n\nОтправляем?".format(num, sum), reply_markup=keys.surekb)
+        bot.register_next_step_handler(msg2, confirm)
+
+def confirm(conf: Message):
+    if conf.text ==         "Да":
+        for a in qiwidb.keys():
+            if a in c_message.text:
+                wallet =    pyqiwi.Wallet(token=qiwidb[str(a)], number=a)
+                pay =       wallet.send('99', str(num), float(sum))
+                info =      'Статус {0}\nПолучатель: {1}\nСумма перевода: {2}'.format(pay.transaction.state,pay.fields.account, pay.sum.amount)
+
+                bot.send_message(conf.chat.id, info)
+    else:
+        bot.send_message(conf.chat.id, "Отменено")
+
+def comtext(com_text: Message):
+    global ct
+    ct =                    com_text.text
+
+    if ct ==                "Отмена":
+        bot.send_message(com_text.chat.id, "Отменено")
+    else:
+        for a in qiwidb.keys():
+            if a in c_message.text:
+                wallet =    pyqiwi.Wallet(token=qiwidb[str(a)], number=a)
+                pay =       wallet.send('99', str(num), float(sum), comment=str(ct))
+                info =      'Статус {0}\nПолучатель: {1}\nСумма перевода: {2}'.format(pay.transaction.state,pay.fields.account, pay.sum.amount)
+
+                bot.send_message(com_text.chat.id, info)
 
 @bot.callback_query_handler(func=lambda c: c.data == 'display_all')
 def ev(callback_query: types.CallbackQuery):

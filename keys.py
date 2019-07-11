@@ -25,8 +25,8 @@ backb =             types.KeyboardButton(text="Отмена")
 backkb =            types.ReplyKeyboardMarkup(resize_keyboard=True)
 backkb.add(backb)
 
-sureb =             types.KeyboardButton(text="Уверен")
-nosureb =           types.KeyboardButton(text="Нет, я передумал")
+sureb =             types.KeyboardButton(text="Да")
+nosureb =           types.KeyboardButton(text="Нет")
 
 surekb =            types.ReplyKeyboardMarkup(resize_keyboard=True)
 surekb.add(sureb)
