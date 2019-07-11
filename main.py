@@ -7,10 +7,25 @@ import shelve
 import pyqiwi
 import re
 from deuslib        import Mongo, Data
+import cherrypy
 
 qiwidb =    shelve.open("qiwi", flag="c", protocol=None, writeback=False) # хранлище номер-токен
 mg =        Mongo().mg() # если понадобится что-то с монгой
 bot =       telebot.TeleBot(config.token)
+
+
+WEBHOOK_HOST = '0.0.0.0'
+WEBHOOK_PORT = 8443  # 443, 80, 88 или 8443 (порт должен быть открыт!)
+WEBHOOK_LISTEN = '0.0.0.0'  # На некоторых серверах придется указывать такой же IP, что и выше
+
+WEBHOOK_SSL_CERT = './webhook_cert.pem'  # Путь к сертификату
+WEBHOOK_SSL_PRIV = './webhook_pkey.pem'  # Путь к приватному ключу
+
+WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
+WEBHOOK_URL_PATH = "/%s/" % (config.token)
+
+for i in mg.qiwi.qiwi.find():
+    qiwidb[str(i['number'])] = str(i['token'])
 
 @bot.message_handler(commands=[ 'start' ])
 def startcom(message: Message):
@@ -61,7 +76,7 @@ def newtoken(nt_msg: Message):
 
     for a in qiwidb.keys():
         if a in message:
-            num = Data().get('qiwi', 'qiwi', key='number', value=a)
+            num =   Data().get('qiwi', 'qiwi', key='number', value=a)
             qiwidb[str(a)] = str(nt)
             Data().update('qiwi', 'qiwi', item=num, key='token', value=nt)
             bot.send_message(nt_msg.chat.id, 'Успешно обновлено')
@@ -83,7 +98,7 @@ def sendcom(number: Message):
         msg =       bot.send_message(number.chat.id, "Отменено", reply_markup=keys.qiwik)
         bot.edit_message_reply_markup(number.chat.id, msg.message_id)
     else:
-        msg =   bot.send_message(number.chat.id, "Введите сумму: ")
+        msg =       bot.send_message(number.chat.id, "Введите сумму: ")
         bot.register_next_step_handler(msg, amountcom)
 
 def amountcom(amount: Message):
@@ -187,4 +202,36 @@ def textcom(message: Message):
     bot.send_message(message.chat.id, "???", reply_markup=keys.mainkb)
 
 
-bot.polling(interval=0, none_stop=True)
+class WebhookServer(object):
+    @cherrypy.expose
+    def index(self):
+        if 'content-length' in cherrypy.request.headers and \
+                        'content-type' in cherrypy.request.headers and \
+                        cherrypy.request.headers['content-type'] == 'application/json':
+            length = int(cherrypy.request.headers['content-length'])
+            json_string = cherrypy.request.body.read(length).decode("utf-8")
+            update = telebot.types.Update.de_json(json_string)
+            # Эта функция обеспечивает проверку входящего сообщения
+            bot.process_new_updates([update])
+            return ''
+        else:
+            raise cherrypy.HTTPError(403)
+
+bot.remove_webhook()
+
+ # Ставим заново вебхук
+bot.set_webhook(url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH,
+                certificate=open(WEBHOOK_SSL_CERT, 'r'))
+
+cherrypy.config.update({
+    'server.socket_host': WEBHOOK_LISTEN,
+    'server.socket_port': WEBHOOK_PORT,
+    'server.ssl_module': 'builtin',
+    'server.ssl_certificate': WEBHOOK_SSL_CERT,
+    'server.ssl_private_key': WEBHOOK_SSL_PRIV
+})
+
+ # Собственно, запуск!
+cherrypy.quickstart(WebhookServer(), WEBHOOK_URL_PATH, {'/': {}})
+
+#bot.polling(interval=0, none_stop=True)
